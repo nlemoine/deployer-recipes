@@ -1,24 +1,29 @@
 {
-  "name": "hellonico/deployer",
+  "name": "hellonico/deployer-recipes",
   "description": "",
   "license": "MIT",
-  "scripts": {
-    "phpcs": "phpcs",
-    "fix": "phpcbf"
-  },
   "require": {
-    "php": "^8.0|^7.3",
-    "deployer/deployer": "dev-master"
+    "php": "^8.0 || ^7.3",
+    "deployer/deployer": ">=7.0"
   },
   "require-dev": {
     "slevomat/coding-standard": "^7.0",
     "squizlabs/php_codesniffer": "^3.5"
   },
+  "autoload": {
+    "files": [
+      "src/functions.php"
+    ]
+  },
   "config": {
-    "sort-packages": true,
-    "process-timeout": 0,
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true
-    }
+    },
+    "process-timeout": 0,
+    "sort-packages": true
+  },
+  "scripts": {
+    "fix": "phpcbf",
+    "phpcs": "phpcs"
   }
 }
