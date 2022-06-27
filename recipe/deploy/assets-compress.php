@@ -63,12 +63,21 @@ function compressAssets(array $dirs, string $compression, string $compressionArg
 
         // Compress remotely
         if (!$local) {
-            run($findAndCompressCmd);
+            try {
+                run($findAndCompressCmd);
+            } catch (RunException $e) {
+                warning("Failed to remotely compress assets in $path: {$e->getMessage()}");
+            }
             continue;
         }
 
         // Compress locally
-        runLocally($findAndCompressCmd);
+        try {
+            runLocally($findAndCompressCmd);
+        } catch (RunException $e) {
+            warning("Failed to locally compress assets in $path: {$e->getMessage()}");
+            continue;
+        }
 
         // Upload to remote
         $compressionExtensionsMap = [
