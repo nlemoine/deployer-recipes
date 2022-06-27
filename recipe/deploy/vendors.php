@@ -36,7 +36,7 @@ set('bin/composer', function () {
             && strtotime(sprintf('+%d days', (int) get('composer_self_update')), (int) run("stat -c %Y $binPath")) <= time()
         ) {
             warning("Composer is older than {{composer_self_update}} days, updating composer...");
-            run("{bin/php}} $binPath self-update");
+            run("{{bin/php}} $binPath self-update");
             // Avoid running update on each deploy
             run("touch -m $(date +%s) $binPath");
         }
