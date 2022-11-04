@@ -47,15 +47,15 @@ function compressAssets(array $dirs, string $compression, string $compressionArg
         try {
             whichLocally($compression);
         } catch (RunException $e) {
-            warning("$compression was not found, either locally or remotely, skipping compression: {$e->getMessage()}");
+            warning("$compression was not locally either, skipping compression: {$e->getMessage()}");
             return;
         }
     }
 
     foreach ($dirs as $findArgs => $dir) {
-        $findArgs = $findArgs ? $findArgs : '';
+        $findArgs = is_string($findArgs) ? $findArgs : '';
         $localPath = $dir;
-        $remotePath = get('release_path') . "/$dir";
+        $remotePath = get('release_or_current_path') . "/$dir";
         $path = $local ? $localPath : $remotePath;
 
         $findCmd = getFindCommand($path, get('assets_compress_extensions')) . ' ' . $findArgs;
