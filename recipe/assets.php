@@ -2,8 +2,8 @@
 
 namespace HelloNico\Deployer;
 
-use function Deployer\after;
+use function Deployer\before;
 
 require_once __DIR__ . '/deploy/assets-compress.php';
 
-after('deploy:update_code', 'deploy:assets:compress');
+before('deploy:publish', 'deploy:assets:compress');
