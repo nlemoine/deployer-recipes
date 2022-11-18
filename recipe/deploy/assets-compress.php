@@ -9,10 +9,9 @@ use function Deployer\desc;
 use function Deployer\task;
 use function Deployer\run;
 use function Deployer\which;
-use function Deployer\runLocally;
 use Deployer\Exception\RunException;
-use function Deployer\upload;
-use function HelloNico\Deployer\whichLocally;
+use function Deployer\test;
+use function Deployer\commandExist;
 
 /**
  * Get find command
@@ -35,102 +34,87 @@ function getFindCommand(string $path, array $extensions): string {
  * @return void
  */
 function compressAssets(array $dirs, string $compression, string $compressionArgs): void {
-    $local = false;
-    try {
-        which($compression);
-    } catch (RunException $e) {
-        warning("$compression is not installed remotely, trying locally");
-        $local = true;
-    }
-
-    if ($local) {
-        try {
-            whichLocally($compression);
-        } catch (RunException $e) {
-            warning("$compression was not locally either, skipping compression: {$e->getMessage()}");
-            return;
-        }
-    }
+    $compression = "{{bin/$compression}}";
 
     foreach ($dirs as $findArgs => $dir) {
         $findArgs = is_string($findArgs) ? $findArgs : '';
-        $localPath = $dir;
         $remotePath = get('release_or_current_path') . "/$dir";
-        $path = $local ? $localPath : $remotePath;
-
-        $findCmd = getFindCommand($path, get('assets_compress_extensions')) . ' ' . $findArgs;
+        $findCmd = getFindCommand($remotePath, get('assets_compress_extensions')) . ' ' . $findArgs;
         $findAndCompressCmd = $findCmd . " -exec $compression $compressionArgs -f {} \;";
 
-        // Compress remotely
-        if (!$local) {
-            try {
-                run($findAndCompressCmd);
-            } catch (RunException $e) {
-                warning("Failed to remotely compress assets in $path: {$e->getMessage()}");
-            }
-            continue;
-        }
-
-        // Compress locally
+        // Compress
         try {
-            runLocally($findAndCompressCmd);
+            run($findAndCompressCmd);
         } catch (RunException $e) {
-            warning("Failed to locally compress assets in $path: {$e->getMessage()}");
-            continue;
+            warning("Failed to remotely compress assets in $remotePath: {$e->getMessage()}");
         }
-
-        // Upload to remote
-        $compressionExtensionsMap = [
-            'gzip' => 'gz',
-            'brotli' => 'br',
-        ];
-        $compressionExtension = $compressionExtensionsMap[$compression] ?? null;
-        if (!$compressionExtension) {
-            warning("Unknown compression extension for $compression");
-            continue;
-        }
-
-        // Find compressed files
-        $files = runLocally(getFindCommand($dir, [$compressionExtension]) . ' ' . $findArgs);
-
-        // Make files path relative to $dir
-        $files = array_map(function($f) use($dir) {
-            return str_replace("$dir/", '', $f);
-        }, explode("\n", $files));
-
-        if (empty($files)) {
-            warning("No $compression compressed files found to upload in $dir");
-            continue;
-        }
-
-        // Create tmp dir
-        $filesPath = md5($dir) . ".txt";
-        // Save files list
-        if (!file_put_contents($filesPath, implode("\n", $files))) {
-            warning("Could not save files list to $filesPath");
-            continue;
-        }
-
-        // $rsyncOptions = [
-        //     "--ignore-existing",
-        //     "--include='*/'",
-        // ];
-        // $rsyncOptions[] = "--include='*.{$compressionExtensionsMap[$compression]}'";
-        // $rsyncOptions[] = "--exclude='*'";
-
-        // $rsyncOptions[] = '--dry-run';
-        $rsyncOptions[] = "--files-from=$filesPath";
-
-        // Upload files
-        upload($dir  . "/", $remotePath, [
-            'options' => $rsyncOptions,
-            'display_stats' => true,
-        ]);
-
-        // Remove tmp dir
-        runLocally("rm $filesPath");
     }
 }
+
+/**
+ * Get Brotli binary depending on OS arch
+ *
+ * @return string
+ */
+function getBrotliDownloadUrl(): string {
+    $arch = run('uname -m');
+    $baseUrlformat = "https://raw.githubusercontent.com/nlemoine/brotli-php/master/bin/linux/%s/brotli";
+    return sprintf($baseUrlformat, $arch);
+}
+
+/**
+ * Download and install brotli binary
+ *
+ * @param string $targetPath
+ * @return void
+ */
+function downloadAndInstallBrotli(string $targetPath) {
+    $brotliUrl = getBrotliDownloadUrl();
+    run("cd {{deploy_path}} && curl -O $brotliUrl && chmod +x brotli");
+    run("mv {{deploy_path}}/brotli $targetPath");
+}
+
+// Self update brotli from time to time
+// Set `false` to disable or an integer to update every N days
+// Default to 360 days
+set('brotli_self_update', 365);
+// Force brotli installation
+set('brotli_force_local', true);
+
+set('bin/brotli', function () {
+    $binPath = '{{deploy_path}}/.dep/brotli';
+    if (test("[ -f $binPath ]")) {
+        // If brotli is older than `brotli_self_update` days, run update
+        if(
+            get('brotli_self_update', 0)
+            && strtotime(sprintf('+%d days', (int) get('brotli_self_update')), (int) run("stat -c %Y $binPath")) <= time()
+        ) {
+            warning("Brotli is older than {{brotli_self_update}} days, updating brotli...");
+            downloadAndInstallBrotli($binPath);
+            // Avoid running update on each deploy
+            run("touch -m $(date +%s) $binPath");
+        }
+
+        return $binPath;
+    }
+
+    if (commandExist('brotli') && !get('brotli_force_local', true)) {
+        return which('brotli');
+    }
+
+    warning("Brotli binary wasn't found. Installing latest brotli to $binPath.");
+    downloadAndInstallBrotli($binPath);
+
+    return $binPath;
+});
+
+set('bin/gzip', function () {
+    if (commandExist('gzip')) {
+        return which('gzip');
+    }
+
+    throw new \RuntimeException('gzip binary not found');
+});
 
 /**
  * Directories where to look for assets to compress
@@ -177,6 +161,13 @@ task('deploy:assets:compress', function() {
     }
 
     foreach ($assetsCompressions as $compression => $compressionArgs) {
+        try {
+            get('bin/' . $compression);
+        } catch(\Exception $e) {
+            warning("Compression $compression is not available: {$e->getMessage()}");
+            unset($assetsCompressions[$compression]);
+            continue;
+        }
         compressAssets($assetsDirs, $compression, $compressionArgs);
     }
 });
