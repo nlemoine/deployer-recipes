@@ -23,8 +23,3 @@ function whichLocally(string $name): string
     // Deal with issue when `type -p` outputs something like `type -ap` in some implementations
     return trim(str_replace("$name is", "", $path));
 }
-
-// Add include path
-if (php_sapi_name() === 'cli' && isset($_SERVER['SCRIPT_NAME']) && basename($_SERVER['SCRIPT_NAME']) === 'dep') {
-    set_include_path(dirname(realpath(__DIR__ . '/../../../autoload.php')) . PATH_SEPARATOR . get_include_path());
-}

@@ -4,6 +4,7 @@ namespace HelloNico\Deployer;
 
 use function Deployer\set;
 use function Deployer\get;
+use function Deployer\cd;
 use function Deployer\test;
 use function Deployer\warning;
 use function Deployer\desc;
@@ -29,7 +30,7 @@ set('bin/wp', function () {
             && strtotime(sprintf('+%d days', (int) get('wpcli_self_update')), (int) run("stat -c %Y $binPath")) <= time()
         ) {
             warning("WP CLI is older than {{wpcli_self_update}} days, updating wp-cli...");
-            run("{{bin/php}} $binPath cli update");
+            run("{{bin/php}} $binPath cli update --yes");
             // Avoid running update on each deploy
             run("touch -m $(date +%s) $binPath");
         }
