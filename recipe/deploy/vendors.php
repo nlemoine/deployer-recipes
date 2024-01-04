@@ -1,17 +1,8 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace HelloNico\Deployer;
+declare(strict_types=1);
 
-use function Deployer\set;
-use function Deployer\get;
-use function Deployer\test;
-use function Deployer\warning;
-use function Deployer\desc;
-use function Deployer\task;
-use function Deployer\run;
-use function Deployer\which;
-use function Deployer\cd;
-use function Deployer\commandExist;
+namespace Deployer;
 
 set('vendor_dirs', ['{{release_path}}']);
 set('composer_action', 'install');
@@ -29,29 +20,29 @@ set('composer_options', '--verbose --prefer-dist --no-progress --no-interaction 
 // download desired phar and place it at `.dep/composer.phar`.
 set('bin/composer', function () {
     $binPath = '{{deploy_path}}/.dep/composer.phar';
-    if (test("[ -f $binPath ]")) {
+    if (test("[ -f {$binPath} ]")) {
         // If composer.phar is older than `composer_self_update` days, run self update
-        if(
+        if (
             get('composer_self_update', 0)
-            && strtotime(sprintf('+%d days', (int) get('composer_self_update')), (int) run("stat -c %Y $binPath")) <= time()
+            && strtotime(sprintf('+%d days', (int) get('composer_self_update')), (int) run("stat -c %Y {$binPath}")) <= time()
         ) {
-            warning("Composer is older than {{composer_self_update}} days, updating composer...");
-            run("{{bin/php}} $binPath self-update");
+            warning('Composer is older than {{composer_self_update}} days, updating composer...');
+            run("{{bin/php}} {$binPath} self-update");
             // Avoid running update on each deploy
-            run("touch -m $(date +%s) $binPath");
+            run("touch -m $(date +%s) {$binPath}");
         }
 
-        return "{{bin/php}} $binPath";
+        return "{{bin/php}} {$binPath}";
     }
 
     if (commandExist('composer') && !get('composer_force_phar')) {
         return '{{bin/php}} ' . which('composer');
     }
 
-    warning("Composer binary wasn't found. Installing latest composer to $binPath.");
-    run("cd {{deploy_path}} && curl -sS https://getcomposer.org/installer | {{bin/php}}");
-    run("mv {{deploy_path}}/composer.phar $binPath");
-    return "{{bin/php}} $binPath";
+    warning("Composer binary wasn't found. Installing latest composer to {$binPath}.");
+    run('cd {{deploy_path}} && curl -sS https://getcomposer.org/installer | {{bin/php}}');
+    run("mv {{deploy_path}}/composer.phar {$binPath}");
+    return "{{bin/php}} {$binPath}";
 });
 
 desc('Installs vendors');
@@ -62,6 +53,6 @@ task('deploy:vendors', function () {
         warning('To speed up composer installation setup "unzip" command with PHP zip extension.');
     }
     foreach (get('vendor_dirs', []) as $path) {
-        run("cd $path && {{bin/composer}} {{composer_action}} {{composer_options}} 2>&1");
+        run("cd {$path} && {{bin/composer}} {{composer_action}} {{composer_options}} 2>&1");
     }
 });

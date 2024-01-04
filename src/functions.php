@@ -1,8 +1,9 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace HelloNico\Deployer;
+declare(strict_types=1);
 
-use function Deployer\runLocally;
+namespace Deployer;
+
 use Deployer\Exception\RunException;
 
 /**
@@ -15,16 +16,11 @@ function whichLocally(string $name): string
     // Try `command`, should cover all Bourne-like shells
     // Try `which`, should cover most other cases
     // Fallback to `type` command, if the rest fails
-    $path = runLocally("command -v $nameEscaped || which $nameEscaped || type -p $nameEscaped");
+    $path = runLocally("command -v {$nameEscaped} || which {$nameEscaped} || type -p {$nameEscaped}");
     if (empty($path)) {
-        throw new \RuntimeException("Can't locate [$nameEscaped] - neither of [command|which|type] commands are available");
+        throw new \RuntimeException("Can't locate [{$nameEscaped}] - neither of [command|which|type] commands are available");
     }
 
     // Deal with issue when `type -p` outputs something like `type -ap` in some implementations
-    return trim(str_replace("$name is", "", $path));
-}
-
-// Add include path
-if (php_sapi_name() === 'cli' && isset($_SERVER['SCRIPT_NAME']) && basename($_SERVER['SCRIPT_NAME']) === 'dep') {
-    set_include_path(dirname(realpath(__DIR__ . '/../../../autoload.php')) . PATH_SEPARATOR . get_include_path());
+    return trim(str_replace("{$name} is", '', $path));
 }

@@ -1,77 +1,60 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace HelloNico\Deployer;
+declare(strict_types=1);
 
-use function Deployer\set;
-use function Deployer\get;
-use function Deployer\warning;
-use function Deployer\desc;
-use function Deployer\task;
-use function Deployer\run;
-use function Deployer\which;
+namespace Deployer;
+
 use Deployer\Exception\RunException;
-use function Deployer\test;
-use function Deployer\commandExist;
 
 /**
  * Get find command
- *
- * @param string $path
- * @param array $extensions
- * @return string
  */
-function getFindCommand(string $path, array $extensions): string {
-    $findFiles = implode(' -o ', array_map(fn($ext) => "-iname \*.$ext", $extensions));
-    return "find $path -type f \( $findFiles \)";
+function getFindCommand(string $path, array $extensions): string
+{
+    $findFiles = implode(' -o ', array_map(fn ($ext) => "-iname \*.{$ext}", $extensions));
+    return "find {$path} -type f \( {$findFiles} \)";
 }
 
 /**
  * Compress assets
- *
- * @param array $dirs
- * @param string $compression
- * @param string $compressionArgs
- * @return void
  */
-function compressAssets(array $dirs, string $compression, string $compressionArgs): void {
-    $compression = "{{bin/$compression}}";
+function compressAssets(array $dirs, string $compression, string $compressionArgs): void
+{
+    $compression = "{{bin/{$compression}}}";
 
     foreach ($dirs as $findArgs => $dir) {
-        $findArgs = is_string($findArgs) ? $findArgs : '';
-        $remotePath = get('release_or_current_path') . "/$dir";
+        $findArgs = \is_string($findArgs) ? $findArgs : '';
+        $remotePath = get('release_or_current_path') . "/{$dir}";
         $findCmd = getFindCommand($remotePath, get('assets_compress_extensions')) . ' ' . $findArgs;
-        $findAndCompressCmd = $findCmd . " -exec $compression $compressionArgs -f {} \;";
+        $findAndCompressCmd = $findCmd . " -exec {$compression} {$compressionArgs} -f {} \;";
 
         // Compress
         try {
             run($findAndCompressCmd);
         } catch (RunException $e) {
-            warning("Failed to remotely compress assets in $remotePath: {$e->getMessage()}");
+            warning("Failed to remotely compress assets in {$remotePath}: {$e->getMessage()}");
         }
     }
 }
 
 /**
  * Get Brotli binary depending on OS arch
- *
- * @return string
  */
-function getBrotliDownloadUrl(): string {
+function getBrotliDownloadUrl(): string
+{
     $arch = run('uname -m');
-    $baseUrlformat = "https://raw.githubusercontent.com/nlemoine/brotli-php/master/bin/linux/%s/brotli";
+    $baseUrlformat = 'https://raw.githubusercontent.com/nlemoine/brotli-php/master/bin/linux/%s/brotli';
     return sprintf($baseUrlformat, $arch);
 }
 
 /**
  * Download and install brotli binary
- *
- * @param string $targetPath
- * @return void
  */
-function downloadAndInstallBrotli(string $targetPath) {
+function downloadAndInstallBrotli(string $targetPath)
+{
     $brotliUrl = getBrotliDownloadUrl();
-    run("cd {{deploy_path}} && curl -O $brotliUrl && chmod +x brotli");
-    run("mv {{deploy_path}}/brotli $targetPath");
+    run("cd {{deploy_path}} && curl -O {$brotliUrl} && chmod +x brotli");
+    run("mv {{deploy_path}}/brotli {$targetPath}");
 }
 
 // Self update brotli from time to time
@@ -83,16 +66,16 @@ set('brotli_force_local', true);
 
 set('bin/brotli', function () {
     $binPath = '{{deploy_path}}/.dep/brotli';
-    if (test("[ -f $binPath ]")) {
+    if (test("[ -f {$binPath} ]")) {
         // If brotli is older than `brotli_self_update` days, run update
-        if(
+        if (
             get('brotli_self_update', 0)
-            && strtotime(sprintf('+%d days', (int) get('brotli_self_update')), (int) run("stat -c %Y $binPath")) <= time()
+            && strtotime(sprintf('+%d days', (int) get('brotli_self_update')), (int) run("stat -c %Y {$binPath}")) <= time()
         ) {
-            warning("Brotli is older than {{brotli_self_update}} days, updating brotli...");
+            warning('Brotli is older than {{brotli_self_update}} days, updating brotli...');
             downloadAndInstallBrotli($binPath);
             // Avoid running update on each deploy
-            run("touch -m $(date +%s) $binPath");
+            run("touch -m $(date +%s) {$binPath}");
         }
 
         return $binPath;
@@ -102,7 +85,7 @@ set('bin/brotli', function () {
         return which('brotli');
     }
 
-    warning("Brotli binary wasn't found. Installing latest brotli to $binPath.");
+    warning("Brotli binary wasn't found. Installing latest brotli to {$binPath}.");
     downloadAndInstallBrotli($binPath);
 
     return $binPath;
@@ -142,13 +125,12 @@ set('assets_compress_extensions', [
  * Compressions and args
  */
 set('assets_compress_compressions', [
-    'gzip' => '-k -9',
+    'gzip'   => '-k -9',
     'brotli' => '',
 ]);
 
 desc('Pre compress static assets');
-task('deploy:assets:compress', function() {
-
+task('deploy:assets:compress', function () {
     $assetsDirs = get('assets_compress_dirs');
     if (empty($assetsDirs)) {
         return;
@@ -156,19 +138,18 @@ task('deploy:assets:compress', function() {
 
     $assetsCompressions = get('assets_compress_compressions');
 
-    if (count(array_intersect(array_keys($assetsCompressions), ['brotli', 'gzip'])) === 0) {
+    if (\count(array_intersect(array_keys($assetsCompressions), ['brotli', 'gzip'])) === 0) {
         throw new \Exception('Illegal compression');
     }
 
     foreach ($assetsCompressions as $compression => $compressionArgs) {
         try {
             get('bin/' . $compression);
-        } catch(\Exception $e) {
-            warning("Compression $compression is not available: {$e->getMessage()}");
+        } catch (\Exception $e) {
+            warning("Compression {$compression} is not available: {$e->getMessage()}");
             unset($assetsCompressions[$compression]);
             continue;
         }
         compressAssets($assetsDirs, $compression, $compressionArgs);
     }
 });
-
