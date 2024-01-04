@@ -5,8 +5,7 @@ namespace Deployer;
 require_once 'recipe/common.php';
 require_once __DIR__ . '/wordpress.php';
 require_once __DIR__ . '/cachetool.php';
-
-add('recipes', ['n5s']);
+require_once 'contrib/crontab.php';
 
 add('crontab:jobs', [
     '{{wordpress_cron_job}}',
@@ -15,9 +14,9 @@ add('crontab:jobs', [
 task('deploy:success', function () {
     info('Successfully deployed!');
 
-    if (get('home_url')) {
+    if (get('wordpress_home_url')) {
         writeln('🚀');
-        writeln('{{home_url}}');
+        writeln('{{wordpress_home_url}}');
     }
 })->hidden();
 
@@ -52,6 +51,7 @@ task('deploy:clear', [
 // Step 4: Publish release
 desc('Publishes the release');
 task('deploy:publish', [
+    'crontab:sync',
     'wordpress:check', // Last check before release
     'deploy:symlink', // Symlink release to current (⚠️ new release is live)
     'deploy:clear:opcache', // Clear opcache cache

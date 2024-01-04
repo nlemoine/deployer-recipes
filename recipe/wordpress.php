@@ -4,7 +4,7 @@ namespace Deployer;
 
 require_once __DIR__ . '/deploy/wp-cli.php';
 
-set('home_url', function () {
+set('wordpress_home_url', function () {
     $homeUrl = wp('option get home');
     if (empty($homeUrl)) {
         $config = wpGetConfig();
@@ -13,6 +13,17 @@ set('home_url', function () {
 
     return $homeUrl;
 });
+
+# WordPress cron
+set('bin/wordpress_cron', function () {
+    return str_replace(
+        get('release_or_current_path'),
+        get('current_path'),
+        parse('{{bin/wp}} cron event run --due-now'),
+    );
+});
+set('wordpress_cron_interval', '*/15 * * * *');
+set('wordpress_cron_job', '{{wordpress_cron_interval}} cd {{current_path}} && {{bin/wordpress_cron}} > /dev/null 2>&1');
 
 function wordpressSkipIfNotInstalled()
 {
