@@ -19,10 +19,14 @@ set('bin/wp', function () {
             get('wpcli_self_update', 0)
             && strtotime(sprintf('+%d days', (int) get('wpcli_self_update')), (int) run("stat -c %Y {$binPath}")) <= time()
         ) {
-            warning('WP CLI is older than {{wpcli_self_update}} days, updating wp-cli...');
-            run("{{bin/php}} {$binPath} cli update --yes");
-            // Avoid running update on each deploy
-            run("touch -m $(date +%s) {$binPath}");
+            try {
+                warning('WP CLI is older than {{wpcli_self_update}} days, updating wp-cli...');
+                run("{{bin/php}} {$binPath} cli update --yes");
+                // Avoid running update on each deploy
+                run("touch -m $(date +%s) {$binPath}");
+            } catch(\Throwable) {
+                warning('WP CLI could not be updated');
+            }
         }
 
         return "{{bin/php}} {$binPath}";
