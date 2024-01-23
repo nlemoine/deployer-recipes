@@ -5,7 +5,6 @@ namespace Deployer;
 require_once 'recipe/common.php';
 require_once __DIR__ . '/wordpress.php';
 require_once __DIR__ . '/cachetool.php';
-require_once 'contrib/crontab.php';
 
 add('crontab:jobs', [
     '{{wordpress_cron_job}}',
@@ -51,7 +50,7 @@ task('deploy:clear', [
 // Step 4: Publish release
 desc('Publishes the release');
 task('deploy:publish', [
-    'crontab:sync',
+    'deploy:crontab:sync',
     'wordpress:check', // Last check before release
     'deploy:symlink', // Symlink release to current (⚠️ new release is live)
     'deploy:clear:opcache', // Clear opcache cache
