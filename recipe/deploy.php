@@ -4,6 +4,7 @@ namespace Deployer;
 
 require_once 'recipe/common.php';
 require_once __DIR__ . '/wordpress.php';
+require_once __DIR__ . '/crontab.php';
 require_once __DIR__ . '/cachetool.php';
 
 add('crontab:jobs', [
