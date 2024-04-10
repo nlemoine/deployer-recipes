@@ -21,6 +21,9 @@ task('deploy:crontab:sync', function () {
         warning('crontab is not available, skipping setting up the cron jobs');
         return;
     }
-
-    invoke('crontab:sync');
+    try {
+        invoke('crontab:sync');
+    } catch(\Exception $e) {
+        warning('could not install the crontab jobs');
+    }
 });
