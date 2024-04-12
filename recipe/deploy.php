@@ -46,6 +46,7 @@ task('deploy:clear', [
     'wordpress:cache:flush', // Flush object cache
     'wordpress:db:migrate', // Migrate database
     'wordpress:rewrite:flush', // Flush rewrite rules
+    'wordpress:commands', // Custom wp-cli commands
 ]);
 
 // Step 4: Publish release

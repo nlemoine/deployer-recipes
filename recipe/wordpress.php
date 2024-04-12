@@ -67,3 +67,15 @@ desc('WordPress: check installation');
 task('wordpress:check', function () {
     wp("eval 'echo 200;'");
 });
+
+desc('WordPress: custom WP-CLI commands');
+task('wordpress:commands', function () {
+    if (wordpressSkipIfNotInstalled()) {
+        return;
+    }
+
+    $commands = get('wpcli_commands', []);
+    foreach ($commands as $command) {
+        wp($command);
+    }
+});
