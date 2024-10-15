@@ -24,7 +24,7 @@ set('bin/composer', function () {
         // If composer.phar is older than `composer_self_update` days, run self update
         if (
             get('composer_self_update', 0)
-            && strtotime(sprintf('+%d days', (int) get('composer_self_update')), (int) run("stat -c %Y {$binPath}")) <= time()
+            && strtotime(sprintf('+%d days', (int) get('composer_self_update')), getModifiedTime($binPath)) <= time()
         ) {
             warning('Composer is older than {{composer_self_update}} days, updating composer...');
             run("{{bin/php}} {$binPath} self-update");

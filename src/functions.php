@@ -24,3 +24,23 @@ function whichLocally(string $name): string
     // Deal with issue when `type -p` outputs something like `type -ap` in some implementations
     return trim(str_replace("{$name} is", '', $path));
 }
+
+/**
+ * Get file modification time.
+ *
+ * Stat behaves differently on different systems.
+ *
+ * @see https://unix.stackexchange.com/questions/349555/stat-modification-timestamp-of-a-file
+ *
+ * @param string $path
+ * @return integer Unix timestamp
+ */
+function getModifiedTime(string $path): int
+{
+    $statArgs = '-c %Y';
+    if (str_contains(strtolower(run("uname")), 'freebsd')) {
+        $statArgs = '-f %m';
+    }
+
+    return (int) run("stat {$statArgs} {$path}");
+}

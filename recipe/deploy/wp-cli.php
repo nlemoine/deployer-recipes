@@ -17,7 +17,7 @@ set('bin/wp', function () {
         // If wp-cli.phar is older than `wpcli_self_update` days, run self update
         if (
             get('wpcli_self_update', 0)
-            && strtotime(sprintf('+%d days', (int) get('wpcli_self_update')), (int) run("stat -c %Y {$binPath}")) <= time()
+            && strtotime(sprintf('+%d days', (int) get('wpcli_self_update')), getModifiedTime($binPath)) <= time()
         ) {
             try {
                 warning('WP CLI is older than {{wpcli_self_update}} days, updating wp-cli...');
