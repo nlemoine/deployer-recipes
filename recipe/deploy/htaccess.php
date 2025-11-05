@@ -45,9 +45,10 @@ task('deploy:htaccess', function () {
     start:
     // Clone the repository to a bare repo.
     run("[ -d {$bare} ] || mkdir -p {$bare}");
-    run("[ -f {$bare}/.git/HEAD ] || {$git} clone {$repository} {$bare} 2>&1", [
-        'env' => $env,
-    ]);
+    run(
+        command: "[ -f {$bare}/.git/HEAD ] || {$git} clone {$repository} {$bare} 2>&1",
+        env: $env
+    );
 
     cd($bare);
 
@@ -58,9 +59,10 @@ task('deploy:htaccess', function () {
         goto start;
     }
 
-    run("{$git} remote update 2>&1", [
-        'env' => $env,
-    ]);
+    run(
+        command: "{$git} remote update 2>&1",
+        env: $env,
+    );
     run("{$git} checkout --force {$target}");
 
     // Get the config file.
