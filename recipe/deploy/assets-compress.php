@@ -43,7 +43,7 @@ function compressAssets(array $dirs, string $compression, string $compressionArg
 function getBrotliDownloadUrl(): string
 {
     $arch = run('uname -m');
-    $baseUrlformat = 'https://raw.githubusercontent.com/nlemoine/brotli-php/master/bin/linux/%s/brotli';
+    $baseUrlformat = 'https://raw.githubusercontent.com/nlemoine/local-bin-brotli/main/bin/linux/x64/brotli';
     return sprintf($baseUrlformat, $arch);
 }
 
