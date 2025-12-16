@@ -76,7 +76,8 @@ function getHostsFromWpCliAliases(string $wpCliFile): array
             throw new \RuntimeException(\sprintf('No host found in ssh url: %s', $alias['ssh']));
         }
 
-        $host = new Host($sshParts['host']);
+        $stageName = ltrim($stage, '@');
+        $host = new Host($stageName);
         $host->setHostname($sshParts['host']);
         $host->setRemoteUser($sshParts['user'] ?? null);
         if (isset($sshParts['port'])) {
@@ -90,7 +91,7 @@ function getHostsFromWpCliAliases(string $wpCliFile): array
         $host->setDeployPath(rtrim($deployPath, '/'));
 
         $host->setLabels([
-            'stage' => ltrim($stage, '@'),
+            'stage' => $stageName,
         ]);
 
         foreach ($alias['deploy'] ?? [] as $key => $value) {
@@ -116,7 +117,7 @@ function getHostsFromWpCliAliases(string $wpCliFile): array
 
 	// Auto configure hosts from wp-cli.yml
     $hosts = getHostsFromWpCliAliases($wpCliFile);
-    foreach ($hosts as $key => $host) {
-        Deployer::get()->hosts->set($host->getHostname(), $host);
+    foreach ($hosts as $host) {
+        Deployer::get()->hosts->set($host->getAlias() ?? $host->getHostname(), $host);
     }
 })();
